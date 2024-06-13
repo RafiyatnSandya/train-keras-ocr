@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 # Load the recognizer with the custom weights
 recognizer = keras_ocr.recognition.Recognizer(alphabet=string.printable, weights=None)
-recognizer.model.load_weights(Bangkit_CRNN_Model.h5')
+recognizer.model.load_weights('Bangkit_CRNN_Model.h5')
 pipeline = keras_ocr.pipeline.Pipeline(recognizer=recognizer)
 
 # Function to filter OCR entities
