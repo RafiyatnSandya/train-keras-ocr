@@ -225,9 +225,6 @@ Epoch 20/1000
 
 The model compiled is overfitting due to train and test data, it need more variations to decreasing the validation loss. Training using 10000+ images take about 234ms/step using GTX 1050Ti, CUDA 11.6, CuDNN 8.4 
 
-#Test and Validation
-Test using the test data, which 1935 image from our private dataset. The test divided into two categories, overall accuracy and character accuracy.  
-
 ```python
 ...................................................
 Predicted: kewarganegaraan, Actual: kewarganegaraan
@@ -245,3 +242,11 @@ Overall Accuracy: 75.29715762273902%
 Character Accuracy: 83.85959899033195%
 ```
 
+# Deploy Locally
+
+for deploy locally using streamlit 
+
+```python
+pip install streamlit
+streamlit run app.py
+```
