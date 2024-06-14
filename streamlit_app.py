@@ -111,7 +111,7 @@ def create_filtered_texts(final_sorted_data):
     return filtered_texts
 
 # Streamlit UI
-st.title("OCR KTP Reader")
+st.title("Keras OCR KTP")
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
