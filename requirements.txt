@@ -4,4 +4,4 @@ json5
 jsonpointer  
 jsonschema
 jsonschema-specifications 
-protobuf==3.20.0
+protobuf<3.20
