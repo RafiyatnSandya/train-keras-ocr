@@ -1,4 +1,4 @@
-keras_ocr
 string
 json
 tensorflow==2.10.0
+keras_ocr
