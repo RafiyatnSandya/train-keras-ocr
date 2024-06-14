@@ -38,6 +38,13 @@ def filter_entities(entities):
             filtered_entities.append({"text": entity["text"], "coordinates": rounded_coordinates})
     return filtered_entities
 
+# Menjalankan filtering
+filtered_data = filter_entities(ocr_results)
+
+# --- Code 4 ---
+# Urutkan berdasarkan y1
+data_sorted_by_y1 = sorted(filtered_data, key=lambda x: x['coordinates'][0][1])
+
 # Function to group by y1 range
 def group_by_y1_range(filtered_data, range_threshold=5):
     grouped = []
@@ -57,38 +64,48 @@ def group_by_y1_range(filtered_data, range_threshold=5):
         grouped.append(temp_group)
     return grouped
 
-# Function to sort data by y1 and then x1
-def sort_and_group_data(filtered_data):
-    data_sorted_by_y1 = sorted(filtered_data, key=lambda x: x['coordinates'][0][1])
-    grouped_data = group_by_y1_range(data_sorted_by_y1)
-    final_sorted_data = []
-    for group in grouped_data:
-        sorted_group = sorted(group, key=lambda x: x['coordinates'][0][0])
-        final_sorted_data.extend(sorted_group)
-    return final_sorted_data
+# Kelompokkan filtered_data berdasarkan rentang y1 ±5
+grouped_data = group_by_y1_range(data_sorted_by_y1)
 
-# Function to determine the case based on given criteria
+# Urutkan setiap kelompok berdasarkan x1
+final_sorted_data = []
+for group in grouped_data:
+    sorted_group = sorted(group, key=lambda x: x['coordinates'][0][0])
+    final_sorted_data.extend(sorted_group)
+
+# --- Code 5 ---
+import json
+
+# Fungsi untuk menentukan case berdasarkan kriteria yang diberikan
 def determine_case(data):
     for entity in data:
         x1, y1 = entity['coordinates'][0]
         x2, y2 = entity['coordinates'][1]
         x4, y4 = entity['coordinates'][3]
+
         if x1 < 35 and y1 < 210:
             if len(entity['text']) >= 5:
                 return "case 1"
+
     return "case 2"
 
-# Function to create the final filtered texts dictionary for case 1
-def create_filtered_texts_case1(final_sorted_data):
+# Menentukan case berdasarkan data
+selected_case = determine_case(final_sorted_data)
+
+# Implementasi untuk case 1 dan case 2
+if selected_case == "case 1":
+    # CASE 1 - ktp 1 baris
     filtered_texts = {
-        "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "", "Alamat": "",
-        "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "", "Status Perkawinan": "", "Pekerjaan": "",
-        "Kewarganegaraan": "", "Berlaku Hingga": ""
+        "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "",
+        "Alamat": "", "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "",
+        "Status Perkawinan": "", "Pekerjaan": "", "Kewarganegaraan": "", "Berlaku Hingga": ""
     }
+
     for entity in final_sorted_data:
         x1, y1 = entity['coordinates'][0]
         x2, y2 = entity['coordinates'][1]
         x4, y4 = entity['coordinates'][3]
+
         if x1 > 210 and x2 < 700 and y1 > 95 and y4 < 154:
             filtered_texts["NIK"] = entity['text']
         if x1 > 225 and x2 < 695 and y1 > 150 and y4 < 199:
@@ -115,23 +132,30 @@ def create_filtered_texts_case1(final_sorted_data):
             filtered_texts["Pekerjaan"] += entity['text'] + " "
         if x1 > 225 and x2 < 355 and y1 > 440 and y4 < 494:
             filtered_texts["Kewarganegaraan"] += entity['text'] + " "
-        if x1 > 225 and x2 < 700 and y1 > 475 and y4 < 524:
+        if x1 > 225 and x2 < 715 and y1 > 470 and y4 < 525:
             filtered_texts["Berlaku Hingga"] += entity['text'] + " "
+        
+    # Tampilkan hasil filtered_texts
     for key in filtered_texts:
         filtered_texts[key] = filtered_texts[key].strip().upper()
-    return filtered_texts
 
-# Function to create the final filtered texts dictionary for case 2
-def create_filtered_texts_case2(final_sorted_data):
+    formatted_output = json.dumps(filtered_texts, indent=4)
+    print(formatted_output)
+
+
+elif selected_case == "case 2":
+    # CASE 2 - ktp 2 baris
     filtered_texts = {
-        "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "", "Alamat": "",
-        "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "", "Status Perkawinan": "", "Pekerjaan": "",
-        "Kewarganegaraan": "", "Berlaku Hingga": ""
+        "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "",
+        "Alamat": "", "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "",
+        "Status Perkawinan": "", "Pekerjaan": "", "Kewarganegaraan": "", "Berlaku Hingga": ""
     }
+
     for entity in final_sorted_data:
         x1, y1 = entity['coordinates'][0]
         x2, y2 = entity['coordinates'][1]
         x4, y4 = entity['coordinates'][3]
+
         if x1 > 210 and x2 < 650 and y1 > 95 and y4 < 132:
             filtered_texts["NIK"] = entity['text']
         if x1 > 210 and x2 < 650 and y1 > 130 and y4 < 170:
@@ -160,56 +184,43 @@ def create_filtered_texts_case2(final_sorted_data):
             filtered_texts["Kewarganegaraan"] += entity['text'] + " "
         if x1 > 210 and x2 < 650 and y1 > 490 and y4 < 530:
             filtered_texts["Berlaku Hingga"] += entity['text'] + " "
+
+    # Tampilkan hasil filtered_texts
     for key in filtered_texts:
         filtered_texts[key] = filtered_texts[key].strip().upper()
-    return filtered_texts
 
-# Streamlit application
-st.title('OCR for KTP')
+    formatted_output = json.dumps(filtered_texts, indent=4)
+    print(formatted_output)
+
+# Streamlit UI
+st.title("Keras OCR KTP")
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Display the uploaded image
-    st.image(uploaded_file, caption='Uploaded KTP Image', use_column_width=True)
-    
-    # Perform OCR on the image
-    images = [uploaded_file]
-    prediction_groups = pipeline.recognize(images)
-    
-    # Convert predictions to the expected format
-    ocr_data = []
+    # Read the image
+    image = keras_ocr.tools.read(uploaded_file)
+    image_resized = keras_ocr.tools.fit(image, width=1011, height=638, mode="letterbox")
+
+    # Perform OCR
+    prediction_groups = pipeline.recognize([image_resized])
+
+    # Draw annotations
+    fig, ax = plt.subplots(nrows=1, figsize=(20, 20))
+    keras_ocr.tools.drawAnnotations(image=image_resized, predictions=prediction_groups[0], ax=ax)
+    st.pyplot(fig)
+
+    # Process OCR results
+    ocr_results = []
     for prediction in prediction_groups[0]:
         text, box = prediction
-        entity = {
-            "text": text,
-            "coordinates": box
-        }
-        ocr_data.append(entity)
+        ocr_results.append({"text": text, "coordinates": box.tolist()})
 
-    # Filter entities
-    filtered_data = filter_entities(ocr_data)
-    
-    # Determine the case
-    case = determine_case(filtered_data)
-    
-    # Sort and group data
+    # Filter and sort data
+    filtered_data = filter_entities(ocr_results)
     final_sorted_data = sort_and_group_data(filtered_data)
-    
-    # Create final filtered texts dictionary
-    if case == "case 1":
-        final_filtered_texts = create_filtered_texts_case1(final_sorted_data)
-    else:
-        final_filtered_texts = create_filtered_texts_case2(final_sorted_data)
+    filtered_texts = create_filtered_texts(final_sorted_data)
 
-    # Display the final filtered texts as a JSON object
-    st.subheader('Extracted Information')
-    st.json(final_filtered_texts)
-
-    # Visualize the recognized text on the image
-    fig, ax = plt.subplots()
-    ax.imshow(images[0])
-    for entity in final_sorted_data:
-        x, y = entity["coordinates"][0]
-        text = entity["text"]
-        ax.text(x, y, text, color='red', fontsize=12, fontweight='bold')
-    st.pyplot(fig)
+    # Display JSON results
+    json_data = json.dumps(filtered_texts, indent=4)
+    st.subheader("OCR Results")
+    st.json(json_data)
