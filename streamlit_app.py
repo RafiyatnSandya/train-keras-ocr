@@ -67,8 +67,19 @@ def sort_and_group_data(filtered_data):
         final_sorted_data.extend(sorted_group)
     return final_sorted_data
 
-# Function to create the final filtered texts dictionary
-def create_filtered_texts(final_sorted_data):
+# Function to determine the case based on given criteria
+def determine_case(data):
+    for entity in data:
+        x1, y1 = entity['coordinates'][0]
+        x2, y2 = entity['coordinates'][1]
+        x4, y4 = entity['coordinates'][3]
+        if x1 < 35 and y1 < 210:
+            if len(entity['text']) >= 5:
+                return "case 1"
+    return "case 2"
+
+# Function to create the final filtered texts dictionary for case 1
+def create_filtered_texts_case1(final_sorted_data):
     filtered_texts = {
         "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "", "Alamat": "",
         "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "", "Status Perkawinan": "", "Pekerjaan": "",
@@ -110,35 +121,95 @@ def create_filtered_texts(final_sorted_data):
         filtered_texts[key] = filtered_texts[key].strip().upper()
     return filtered_texts
 
-# Streamlit UI
-st.title("Keras OCR KTP")
+# Function to create the final filtered texts dictionary for case 2
+def create_filtered_texts_case2(final_sorted_data):
+    filtered_texts = {
+        "NIK": "", "Nama": "", "Tempat/Tgl Lahir": "", "Jenis kelamin": "", "Gol. Darah": "", "Alamat": "",
+        "RT/RW": "", "Kel/Desa": "", "Kecamatan": "", "Agama": "", "Status Perkawinan": "", "Pekerjaan": "",
+        "Kewarganegaraan": "", "Berlaku Hingga": ""
+    }
+    for entity in final_sorted_data:
+        x1, y1 = entity['coordinates'][0]
+        x2, y2 = entity['coordinates'][1]
+        x4, y4 = entity['coordinates'][3]
+        if x1 > 210 and x2 < 650 and y1 > 95 and y4 < 132:
+            filtered_texts["NIK"] = entity['text']
+        if x1 > 210 and x2 < 650 and y1 > 130 and y4 < 170:
+            filtered_texts["Nama"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 160 and y4 < 200:
+            filtered_texts["Tempat/Tgl Lahir"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 190 and y4 < 230:
+            filtered_texts["Jenis kelamin"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 220 and y4 < 260:
+            filtered_texts["Gol. Darah"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 250 and y4 < 290:
+            filtered_texts["Alamat"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 280 and y4 < 320:
+            filtered_texts["RT/RW"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 310 and y4 < 350:
+            filtered_texts["Kel/Desa"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 340 and y4 < 380:
+            filtered_texts["Kecamatan"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 370 and y4 < 410:
+            filtered_texts["Agama"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 400 and y4 < 440:
+            filtered_texts["Status Perkawinan"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 430 and y4 < 470:
+            filtered_texts["Pekerjaan"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 460 and y4 < 500:
+            filtered_texts["Kewarganegaraan"] += entity['text'] + " "
+        if x1 > 210 and x2 < 650 and y1 > 490 and y4 < 530:
+            filtered_texts["Berlaku Hingga"] += entity['text'] + " "
+    for key in filtered_texts:
+        filtered_texts[key] = filtered_texts[key].strip().upper()
+    return filtered_texts
+
+# Streamlit application
+st.title('OCR for KTP')
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Read the image
-    image = keras_ocr.tools.read(uploaded_file)
-    image_resized = keras_ocr.tools.fit(image, width=1011, height=638, mode="letterbox")
-
-    # Perform OCR
-    prediction_groups = pipeline.recognize([image_resized])
-
-    # Draw annotations
-    fig, ax = plt.subplots(nrows=1, figsize=(20, 20))
-    keras_ocr.tools.drawAnnotations(image=image_resized, predictions=prediction_groups[0], ax=ax)
-    st.pyplot(fig)
-
-    # Process OCR results
-    ocr_results = []
+    # Display the uploaded image
+    st.image(uploaded_file, caption='Uploaded KTP Image', use_column_width=True)
+    
+    # Perform OCR on the image
+    images = [uploaded_file]
+    prediction_groups = pipeline.recognize(images)
+    
+    # Convert predictions to the expected format
+    ocr_data = []
     for prediction in prediction_groups[0]:
         text, box = prediction
-        ocr_results.append({"text": text, "coordinates": box.tolist()})
+        entity = {
+            "text": text,
+            "coordinates": box
+        }
+        ocr_data.append(entity)
 
-    # Filter and sort data
-    filtered_data = filter_entities(ocr_results)
+    # Filter entities
+    filtered_data = filter_entities(ocr_data)
+    
+    # Determine the case
+    case = determine_case(filtered_data)
+    
+    # Sort and group data
     final_sorted_data = sort_and_group_data(filtered_data)
-    filtered_texts = create_filtered_texts(final_sorted_data)
+    
+    # Create final filtered texts dictionary
+    if case == "case 1":
+        final_filtered_texts = create_filtered_texts_case1(final_sorted_data)
+    else:
+        final_filtered_texts = create_filtered_texts_case2(final_sorted_data)
 
-    # Display JSON results
-    json_data = json.dumps(filtered_texts, indent=4)
-    st.subheader("OCR Results")
-    st.json(json_data)
+    # Display the final filtered texts as a JSON object
+    st.subheader('Extracted Information')
+    st.json(final_filtered_texts)
+
+    # Visualize the recognized text on the image
+    fig, ax = plt.subplots()
+    ax.imshow(images[0])
+    for entity in final_sorted_data:
+        x, y = entity["coordinates"][0]
+        text = entity["text"]
+        ax.text(x, y, text, color='red', fontsize=12, fontweight='bold')
+    st.pyplot(fig)
