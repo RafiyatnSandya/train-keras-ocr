@@ -1,4 +1,4 @@
 keras_ocr
 string
 json
-tensorflow
+tensorflow==2.10.0
