@@ -1,3 +1,5 @@
+# --- Streamlit Code Integration with JSON Parsing ---
+
 import streamlit as st
 import keras_ocr
 import string
@@ -40,10 +42,8 @@ def filter_entities(entities):
 
 # Function to sort and group data
 def sort_and_group_data(filtered_data):
-    # Urutkan berdasarkan y1
     data_sorted_by_y1 = sorted(filtered_data, key=lambda x: x['coordinates'][0][1])
 
-    # Function to group by y1 range
     def group_by_y1_range(filtered_data, range_threshold=5):
         grouped = []
         temp_group = []
@@ -62,10 +62,8 @@ def sort_and_group_data(filtered_data):
             grouped.append(temp_group)
         return grouped
 
-    # Kelompokkan filtered_data berdasarkan rentang y1 ±5
     grouped_data = group_by_y1_range(data_sorted_by_y1)
 
-    # Urutkan setiap kelompok berdasarkan x1
     final_sorted_data = []
     for group in grouped_data:
         sorted_group = sorted(group, key=lambda x: x['coordinates'][0][0])
@@ -73,20 +71,21 @@ def sort_and_group_data(filtered_data):
 
     return final_sorted_data
 
+# Function to determine the case based on filtered data
+def determine_case(data):
+    for entity in data:
+        x1, y1 = entity['coordinates'][0]
+        x2, y2 = entity['coordinates'][1]
+        x4, y4 = entity['coordinates'][3]
+
+        if x1 < 35 and y1 < 210:
+            if len(entity['text']) >= 5:
+                return "case 1"
+
+    return "case 2"
+
 # Function to create filtered texts based on case
 def create_filtered_texts(final_sorted_data):
-    def determine_case(data):
-        for entity in data:
-            x1, y1 = entity['coordinates'][0]
-            x2, y2 = entity['coordinates'][1]
-            x4, y4 = entity['coordinates'][3]
-
-            if x1 < 35 and y1 < 210:
-                if len(entity['text']) >= 5:
-                    return "case 1"
-
-        return "case 2"
-
     selected_case = determine_case(final_sorted_data)
 
     filtered_texts = {
@@ -165,41 +164,35 @@ def create_filtered_texts(final_sorted_data):
             if x1 > 210 and x2 < 650 and y1 > 490 and y4 < 530:
                 filtered_texts["Berlaku Hingga"] += entity['text'] + " "
 
-    # Tampilkan hasil filtered_texts
-    for key in filtered_texts:
-        filtered_texts[key] = filtered_texts[key].strip().upper()
-
     return filtered_texts
 
-# Streamlit UI
-st.title("Keras OCR KTP")
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+# Streamlit Interface
+st.title("OCR Data Extraction and Visualization")
 
-if uploaded_file is not None:
-    # Read the image
-    image = keras_ocr.tools.read(uploaded_file)
-    image_resized = keras_ocr.tools.fit(image, width=1011, height=638, mode="letterbox")
+uploaded_file = st.file_uploader("Upload a JSON file with OCR data", type=["json"])
 
-    # Perform OCR
-    prediction_groups = pipeline.recognize([image_resized])
+if uploaded_file:
+    content = uploaded_file.read()
+    ocr_data = json.loads(content)
 
-    # Draw annotations
-    fig, ax = plt.subplots(nrows=1, figsize=(20, 20))
-    keras_ocr.tools.drawAnnotations(image=image_resized, predictions=prediction_groups[0], ax=ax)
+    entities = ocr_data["ocr"]
+    filtered_data = filter_entities(entities)
+    sorted_grouped_data = sort_and_group_data(filtered_data)
+    extracted_texts = create_filtered_texts(sorted_grouped_data)
+    
+    st.header("Filtered and Extracted Texts")
+    st.json(extracted_texts)
+    
+    st.header("Visualizing OCR Data")
+    fig, ax = plt.subplots()
+    img_path = "path/to/your/image.jpg"  # Replace with the actual image path
+    img = plt.imread(img_path)
+    ax.imshow(img)
+    
+    for entity in sorted_grouped_data:
+        coords = entity['coordinates']
+        poly = plt.Polygon(coords, edgecolor='red', facecolor='none')
+        ax.add_patch(poly)
+        plt.text(coords[0][0], coords[0][1], entity['text'], color='blue', fontsize=12, verticalalignment='top')
+    
     st.pyplot(fig)
-
-    # Process OCR results
-    ocr_results = []
-    for prediction in prediction_groups[0]:
-        text, box = prediction
-        ocr_results.append({"text": text, "coordinates": box.tolist()})
-
-    # Filter and sort data
-    filtered_data = filter_entities(ocr_results)
-    final_sorted_data = sort_and_group_data(filtered_data)
-    filtered_texts = create_filtered_texts(final_sorted_data)
-
-    # Display JSON results
-    json_data = json.dumps(filtered_texts, indent=4)
-    st.subheader("OCR Results")
-    st.json(json_data)
