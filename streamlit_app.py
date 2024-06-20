@@ -1,10 +1,9 @@
-# --- Streamlit Code Integration with JSON Parsing ---
-
 import streamlit as st
 import keras_ocr
 import string
 import json
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Load the recognizer with the custom weights
 recognizer = keras_ocr.recognition.Recognizer(alphabet=string.printable, weights=None)
@@ -15,29 +14,29 @@ pipeline = keras_ocr.pipeline.Pipeline(recognizer=recognizer)
 def filter_entities(entities):
     filtered_entities = []
     for entity in entities:
-        x1 = round(entity["coordinates"][0][0], 2)
-        y1 = round(entity["coordinates"][0][1], 2)
-        x2 = round(entity["coordinates"][1][0], 2)
-        y2 = round(entity["coordinates"][1][1], 2)
-        x3 = round(entity["coordinates"][2][0], 2)
-        y3 = round(entity["coordinates"][2][1], 2)
-        x4 = round(entity["coordinates"][3][0], 2)
-        y4 = round(entity["coordinates"][3][1], 2)
-        
-        if (x1 > 710.00): 
+        x1 = round(entity[1][0][0], 2)
+        y1 = round(entity[1][0][1], 2)
+        x2 = round(entity[1][1][0], 2)
+        y2 = round(entity[1][1][1], 2)
+        x3 = round(entity[1][2][0], 2)
+        y3 = round(entity[1][2][1], 2)
+        x4 = round(entity[1][3][0], 2)
+        y4 = round(entity[1][3][1], 2)
+
+        if x1 > 710.00:
             continue    
-        elif (y1 > 530.00) and len(entity["text"]) <= 3: 
+        elif (y1 > 530.00) and len(entity[0]) <= 3: 
             continue
-        elif (x1 > 540.00 and y1 > 300.00) and len(entity["text"]) <= 3: 
+        elif (x1 > 540.00 and y1 > 300.00) and len(entity[0]) <= 3: 
             continue
-        elif (x1 > 180 and y1 > 95.00 and y4 < 150) and len(entity["text"]) <= 3: 
+        elif (x1 > 180 and y1 > 95.00 and y4 < 150) and len(entity[0]) <= 3: 
             continue
         else:
             rounded_coordinates = []
-            for coord in entity["coordinates"]:
+            for coord in entity[1]:
                 rounded_coord = [int(round(coord[0])), int(round(coord[1]))]
                 rounded_coordinates.append(rounded_coord)
-            filtered_entities.append({"text": entity["text"], "coordinates": rounded_coordinates})
+            filtered_entities.append({"text": entity[0], "coordinates": rounded_coordinates})
     return filtered_entities
 
 # Function to sort and group data
@@ -128,7 +127,7 @@ def create_filtered_texts(final_sorted_data):
                 filtered_texts["Kewarganegaraan"] += entity['text'] + " "
             if x1 > 225 and x2 < 715 and y1 > 470 and y4 < 525:
                 filtered_texts["Berlaku Hingga"] += entity['text'] + " "
-            
+
     elif selected_case == "case 2":
         for entity in final_sorted_data:
             x1, y1 = entity['coordinates'][0]
@@ -167,15 +166,18 @@ def create_filtered_texts(final_sorted_data):
     return filtered_texts
 
 # Streamlit Interface
-st.title("OCR Data Extraction and Visualization")
+st.title("Lintasarta OCR")
 
-uploaded_file = st.file_uploader("Upload a JSON file with OCR data", type=["json"])
+uploaded_file = st.file_uploader("Upload an image file", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
-    content = uploaded_file.read()
-    ocr_data = json.loads(content)
+    image = Image.open(uploaded_file)
+    st.image(image, caption='Uploaded Image', use_column_width=True)
 
-    entities = ocr_data["ocr"]
+    # Perform OCR on the uploaded image
+    predictions = pipeline.recognize([uploaded_file])[0]
+    entities = [(text, box) for (text, box) in predictions]
+
     filtered_data = filter_entities(entities)
     sorted_grouped_data = sort_and_group_data(filtered_data)
     extracted_texts = create_filtered_texts(sorted_grouped_data)
@@ -185,9 +187,7 @@ if uploaded_file:
     
     st.header("Visualizing OCR Data")
     fig, ax = plt.subplots()
-    img_path = "path/to/your/image.jpg"  # Replace with the actual image path
-    img = plt.imread(img_path)
-    ax.imshow(img)
+    ax.imshow(image)
     
     for entity in sorted_grouped_data:
         coords = entity['coordinates']
