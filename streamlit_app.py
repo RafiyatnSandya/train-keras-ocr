@@ -4,6 +4,7 @@ import string
 import json
 import matplotlib.pyplot as plt
 from PIL import Image
+import numpy as np
 
 # Load the recognizer with the custom weights
 recognizer = keras_ocr.recognition.Recognizer(alphabet=string.printable, weights=None)
@@ -166,16 +167,19 @@ def create_filtered_texts(final_sorted_data):
     return filtered_texts
 
 # Streamlit Interface
-st.title("Lintasarta OCR")
+st.title("OCR Data Extraction and Visualization")
 
 uploaded_file = st.file_uploader("Upload an image file", type=["jpg", "jpeg", "png"])
 
-if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Uploaded Image', use_column_width=True)
+if uploaded_file is not None:
+    # Read and resize the image using keras-ocr tools
+    image = keras_ocr.tools.read(uploaded_file)
+    image_resized = keras_ocr.tools.fit(image, width=1011, height=638, mode="letterbox")
+    
+    st.image(image_resized, caption='Uploaded Image', use_column_width=True)
 
     # Perform OCR on the uploaded image
-    predictions = pipeline.recognize([uploaded_file])[0]
+    predictions = pipeline.recognize([image_resized])[0]
     entities = [(text, box) for (text, box) in predictions]
 
     filtered_data = filter_entities(entities)
@@ -187,7 +191,7 @@ if uploaded_file:
     
     st.header("Visualizing OCR Data")
     fig, ax = plt.subplots()
-    ax.imshow(image)
+    ax.imshow(image_resized)
     
     for entity in sorted_grouped_data:
         coords = entity['coordinates']
